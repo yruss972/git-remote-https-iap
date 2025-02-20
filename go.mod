@@ -1,4 +1,4 @@
-module github.com/adohkan/git-remote-https-iap
+module github.com/yruss972/git-remote-https-iap
 
 go 1.17
 

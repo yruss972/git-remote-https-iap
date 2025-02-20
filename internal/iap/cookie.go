@@ -11,8 +11,8 @@ import (
 
 	jwt "github.com/golang-jwt/jwt"
 
-	"github.com/adohkan/git-remote-https-iap/internal/git"
 	"github.com/rs/zerolog/log"
+	"github.com/yruss972/git-remote-https-iap/internal/git"
 )
 
 const (

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adohkan/git-remote-https-iap/internal/git"
-	"github.com/adohkan/git-remote-https-iap/internal/iap"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/yruss972/git-remote-https-iap/internal/git"
+	"github.com/yruss972/git-remote-https-iap/internal/iap"
 )
 
 const (

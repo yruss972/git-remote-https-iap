@@ -114,24 +114,22 @@ func GetIAPAuthToken(domain, helperID, helperSecret, IAPclientID string, forcebr
 	var errorMesg httpError
 
 	refreshToken, err := getRefreshTokenFromCache(domain)
-
-	if forcebrowserflow {
-		log.Debug().Msgf("[GetIAPAuthToken] Forcing getRefreshTokenFromBrowserFlow")
-		refreshToken, err = getRefreshTokenFromBrowserFlow(domain, helperID, helperSecret)
-	}
-
-	if err != nil {
-		log.Debug().Msgf("[GetIAPAuthToken] No cached refresh token for %s: %s", domain, err.Error())
+	if forcebrowserflow || err != nil {
+		if forcebrowserflow {
+			log.Debug().Msgf("[GetIAPAuthToken] Forcing getRefreshTokenFromBrowserFlow")
+		} else {
+			log.Debug().Msgf("[GetIAPAuthToken] No cached refresh token for %s: %s", domain, err.Error())
+		}
 
 		refreshToken, err = getRefreshTokenFromBrowserFlow(domain, helperID, helperSecret)
 		if err != nil {
-			log.Debug().Msgf("[GetIAPAuthToken] getRefreshTokenFromBrowserFlow Failed")
-			return "", err
+			return "", fmt.Errorf("[GetIAPAuthToken] Failed to get refresh token from browser flow: %w", err)
 		}
-		if err := cacheRefreshToken(domain, refreshToken); err != nil {
-			log.Warn().Msgf("[GetIAPAuthToken] Could not cache refresh token for %s: %s", domain, err.Error())
+		if cacheErr := cacheRefreshToken(domain, refreshToken); cacheErr != nil {
+			log.Warn().Msgf("[GetIAPAuthToken] Could not cache refresh token for %s: %s", domain, cacheErr.Error())
 		}
 	}
+
 	log.Debug().Msgf("[GetIAPAuthToken] refreshToken is: %s", refreshToken)
 
 	// exchange our refreshToken for an id_token that we can use as GCP_IAAP_AUTH_TOKEN
@@ -143,20 +141,22 @@ func GetIAPAuthToken(domain, helperID, helperSecret, IAPclientID string, forcebr
 		"grant_type":    {"refresh_token"},
 		"audience":      {IAPclientID},
 	})
-
 	if err != nil {
-		return "", fmt.Errorf("[GetIAPAuthToken] Could not get exchange 'refresh_token' for IAP Auth Token: %s", err.Error())
+		return "", fmt.Errorf("[GetIAPAuthToken] Could not exchange 'refresh_token' for IAP Auth Token: %w", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		json.NewDecoder(resp.Body).Decode(&errorMesg)
-		return "", fmt.Errorf("[GetIAPAuthToken] Could not get exchange 'refresh_token' for IAP Auth Token: HTTP Error Code: %s .... Error Description: %s", errorMesg.ErrorDesc, errorMesg.Error)
+		if decodeErr := json.NewDecoder(resp.Body).Decode(&errorMesg); decodeErr != nil {
+			return "", fmt.Errorf("[GetIAPAuthToken] Failed to decode error message: %w", decodeErr)
+		}
+		return "", fmt.Errorf("[GetIAPAuthToken] Could not exchange 'refresh_token' for IAP Auth Token: HTTP Error Code: %d - Error Description: %s", resp.StatusCode, errorMesg.ErrorDesc)
 	}
 
 	log.Debug().Msgf("[GetIAPAuthToken] Successfully used 'refresh_token' to claim IAP Auth Token")
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("[GetIAPAuthToken] Could not get exchange 'refresh_token' for IAP Auth Token: %s", err.Error())
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
+		return "", fmt.Errorf("[GetIAPAuthToken] Failed to decode response: %w", decodeErr)
 	}
 
 	return result.IDToken, nil

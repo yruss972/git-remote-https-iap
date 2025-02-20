@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/adohkan/git-remote-https-iap/internal/git"
 	"github.com/int128/oauth2cli"
 	"github.com/pkg/browser"
 	"github.com/rs/zerolog/log"
+	"github.com/yruss972/git-remote-https-iap/internal/git"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/sync/errgroup"
